@@ -105,6 +105,7 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   strip.begin(); // Initialize NeoPixel strip object (REQUIRED)
   strip.show();  // Initialize all pixels to 'off'
+  colorWipe(strip.Color(255,   255,   255), 200);    // White
 }
 
 void loop() {
