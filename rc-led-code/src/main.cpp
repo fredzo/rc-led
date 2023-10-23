@@ -8,7 +8,7 @@
 
 #define PIXEL_PIN    27  // Digital IO pin connected to the NeoPixels.
 
-#define PIXEL_COUNT 4  // Number of NeoPixels
+#define PIXEL_COUNT 9 // Number of NeoPixels
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
