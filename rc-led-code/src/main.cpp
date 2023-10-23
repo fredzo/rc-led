@@ -10,6 +10,16 @@
 
 #define PIXEL_COUNT 9 // Number of NeoPixels
 
+#define CLIGNOTANT_DROIT  0
+#define PHARE_DROIT       1
+#define PHARE_GAUCHE      2
+#define CLIGNOTANT_GAUCHE 3
+#define OEIL_GAUCHE       4
+#define OEIL_DROIT        5
+#define GYROPHARE_1       6
+#define GYROPHARE_2       7
+#define GYROPHARE_3       8
+
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 // Argument 1 = Number of pixels in NeoPixel strip
