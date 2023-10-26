@@ -190,7 +190,7 @@ void stopBackward()
   if(backwardNotif)
   {
     setBackwardLedsState(false);
-    EasyBuzzer.stopBeep();
+    EasyBuzzer.stop();
     backwardNotif = false;
   }
 }
@@ -310,6 +310,7 @@ void setup() {
   colorWipe2(strip2.Color(255,   0,   0), 200);    // White
 
   EasyBuzzer.singleBeep(440,500);
+  
   colorWipe2(strip2.Color(0,   0,   0), 0);    // Turn off back leds
 }
 
@@ -325,6 +326,7 @@ bool goRight = false;
 bool braking = false;
 bool goBackward = false;
 bool goForward = false;
+bool siren = false;
 
 byte volume = 15;
 
@@ -450,7 +452,8 @@ void loop() {
     // Check if button is still low after debounce.
     newState = digitalRead(BUTTON_PIN);
     if(newState == LOW) {      // Yes, still low
-        goBackward = !goBackward;
+        siren = !siren;
+        siren ? EasyBuzzer.siren(true) : EasyBuzzer.stop();
 /*      EasyBuzzer.setVolume(volume);
       EasyBuzzer.singleBeep(880,1000);
 #ifdef SERIAL_OUT
