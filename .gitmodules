@@ -1,0 +1,4 @@
+[submodule "rc-led-code/lib/EasyBuzzer"]
+	path = rc-led-code/lib/EasyBuzzer
+	url = https://github.com/fredzo/EasyBuzzer
+	branch = master
