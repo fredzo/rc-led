@@ -35,7 +35,7 @@
 #define CLIGNOTANT_AR_GAUCHE2 0x14
 #define CLIGNOTANT_AR_GAUCHE1 0x15
 
-#define SERIAL_OUT
+//#define SERIAL_OUT
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip1(PIXEL_COUNT_1, PIXEL_PIN_1, NEO_GRB + NEO_KHZ800);
@@ -240,7 +240,7 @@ void blinkRight(bool on)
 
 //////////// Gestion des yeux //////////////
 
-#define EYES_FADE_TIME    1    // 50 ms
+#define EYES_FADE_TIME    1     // 1 ms
 #define EYES_PAUSE_TIME   1000  // 1 s
 unsigned long lastEyesFadeTime = 0;
 byte eyesFadeLevel = 0;
@@ -452,8 +452,8 @@ void loop() {
   updateEyes();
 
   // Lecture cannaux radio
-  int newCh1 = 0;//pulseIn(CHANEL_1_PIN, HIGH, 25000); // Lecture canal 1 (gauche / droite)
-  int newCh2 = 0;//pulseIn(CHANEL_2_PIN, HIGH, 25000); // Lecture canal 2 (avant / arrière)
+  int newCh1 = pulseIn(CHANEL_1_PIN, HIGH, 25000); // Lecture canal 1 (gauche / droite)
+  int newCh2 = pulseIn(CHANEL_2_PIN, HIGH, 25000); // Lecture canal 2 (avant / arrière)
 
   ChanelState newChanelState;
 
