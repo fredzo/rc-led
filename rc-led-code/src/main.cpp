@@ -408,12 +408,51 @@ bool processCh2State(ChanelState ch2State)
   }
 }
 
+//////////// Lecture PWM des entrées radio ////////////
+#define MAX_PULSE_WIDTH     3000 // 3000us
+volatile unsigned long ch1StartTime = 0;
+volatile unsigned long ch1CurTime = 0;
+volatile int ch1PulseWidth = 0;
+volatile unsigned long ch2StartTime = 0;
+volatile unsigned long ch2CurTime = 0;
+volatile int ch2PulseWidth = 0;
+
+void IRAM_ATTR pwmCh1()
+{
+  ch1CurTime = micros();
+  if(ch1CurTime > ch1StartTime)
+  {
+    unsigned long pulseWidth = ch1CurTime - ch1StartTime;
+    if(pulseWidth <= MAX_PULSE_WIDTH)
+    { // Only read rise -> fall width
+      ch1PulseWidth = pulseWidth;
+    }
+  }
+  ch1StartTime = ch1CurTime;
+}
+
+void IRAM_ATTR pwmCh2()
+{
+  ch2CurTime = micros();
+  if(ch2CurTime > ch2StartTime)
+  {
+    unsigned long pulseWidth = ch2CurTime - ch2StartTime;
+    if(pulseWidth <= MAX_PULSE_WIDTH)
+    { // Only read rise -> fall width
+      ch2PulseWidth = pulseWidth;
+    }
+  }
+  ch2StartTime = ch2CurTime;
+}
+
 //////////// Initialisation du programme //////////////
 
 void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   pinMode(CHANEL_1_PIN, INPUT); // Set our input pins for RC chanels
+  attachInterrupt(digitalPinToInterrupt(CHANEL_1_PIN), pwmCh1, CHANGE);  // interruption sur Rise et Fall
   pinMode(CHANEL_2_PIN, INPUT); // Set our input pins for RC chanels
+  attachInterrupt(digitalPinToInterrupt(CHANEL_2_PIN), pwmCh2, CHANGE);  // interruption sur Rise et Fall
   EasyBuzzer.setPin(BUZZER_PIN);
 
 #ifdef SERIAL_OUT
@@ -451,9 +490,11 @@ void loop() {
   // Animation des yeux
   updateEyes();
 
-  // Lecture cannaux radio
-  int newCh1 = pulseIn(CHANEL_1_PIN, HIGH, 25000); // Lecture canal 1 (gauche / droite)
-  int newCh2 = pulseIn(CHANEL_2_PIN, HIGH, 25000); // Lecture canal 2 (avant / arrière)
+  // Lecture cannaux radio (basée sur une interruption)
+  int newCh1 = ch1PulseWidth;
+  int newCh2 = ch2PulseWidth;
+  //int newCh1 = pulseIn(CHANEL_1_PIN, HIGH, 25000); // Lecture canal 1 (gauche / droite)
+  //int newCh2 = pulseIn(CHANEL_2_PIN, HIGH, 25000); // Lecture canal 2 (avant / arrière)
 
   ChanelState newChanelState;
 
