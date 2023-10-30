@@ -37,6 +37,9 @@
 
 // #define SERIAL_OUT
 
+// Fonction déclarée plus loin pour déterminer si l'effet en cours utilise le buzzer
+bool specialEffectHasSound();
+
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip1(PIXEL_COUNT_1, PIXEL_PIN_1, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip2(PIXEL_COUNT_2, PIXEL_PIN_2, NEO_GRB + NEO_KHZ800);
@@ -87,6 +90,7 @@ uint32_t ORANGE = Adafruit_NeoPixel::Color(255,70,0);
 uint32_t BLACK = Adafruit_NeoPixel::Color(0,0,0);
 uint32_t WHITE = Adafruit_NeoPixel::Color(255,255,255);
 uint32_t RED = Adafruit_NeoPixel::Color(255,0,0);
+uint32_t BLUE = Adafruit_NeoPixel::Color(0,0,255);
 
 // Fonction générique pour positionner la couleur d'une LED
 void setLedColor(byte led, uint32_t color) {
@@ -123,9 +127,11 @@ void backward()
   if(!backwardNotif)
   {
     setBackwardLedsState(true);
-    // Use squence number = 0 for infinite sequence
-    // Pause duration must not be 0 (infinite beep) so we set off duration at 0 and pause duration at 500 ms 
-    EasyBuzzer.beep(880,500,0,1,500,0);
+    if(!specialEffectHasSound())
+    { // Use squence number = 0 for infinite sequence
+      // Pause duration must not be 0 (infinite beep) so we set off duration at 0 and pause duration at 500 ms 
+      EasyBuzzer.beep(880,500,0,1,500,0);
+    }
     backwardNotif = true;
   }
 }
@@ -135,7 +141,7 @@ void stopBackward()
   if(backwardNotif)
   {
     setBackwardLedsState(false);
-    EasyBuzzer.stop();
+    if(!specialEffectHasSound()) EasyBuzzer.stop();
     backwardNotif = false;
   }
 }
@@ -203,7 +209,7 @@ void blinkLeft(bool on)
       lastBlinkTime = now;
       lastBlinkState = !lastBlinkState;
       setLeftLedsState(lastBlinkState);
-      if(!backwardNotif) lastBlinkState ? EasyBuzzer.singleBeep(880,50) : EasyBuzzer.singleBeep(440,50);
+      if(!backwardNotif && !specialEffectHasSound()) lastBlinkState ? EasyBuzzer.singleBeep(880,50) : EasyBuzzer.singleBeep(440,50);
     }
   }
   else if(blinkingLeft)
@@ -226,7 +232,7 @@ void blinkRight(bool on)
       lastBlinkTime = now;
       lastBlinkState = !lastBlinkState;
       setRightLedsState(lastBlinkState);
-      if(!backwardNotif) lastBlinkState ? EasyBuzzer.singleBeep(880,5) : EasyBuzzer.singleBeep(440,5);
+      if(!backwardNotif && !specialEffectHasSound()) lastBlinkState ? EasyBuzzer.singleBeep(880,50) : EasyBuzzer.singleBeep(440,50);
     }
   }
   else if(blinkingRight)
@@ -292,7 +298,6 @@ void updateEyes()
   }
 }
 
-
 //////////// Gestion de la radio //////////////
 
 // Etat des canaux radio
@@ -343,6 +348,11 @@ void changeSpecialEffect(bool up)
     }
   }
   (curSpecialEffect == SIREN) ? EasyBuzzer.siren(true) : EasyBuzzer.stop();
+}
+
+bool specialEffectHasSound()
+{
+  return (curSpecialEffect == SIREN);
 }
 
 // Détection du Konami code
@@ -414,6 +424,109 @@ bool processCh2State(ChanelState ch2State)
   else
   {
     return false;
+  }
+}
+//////////// Gestion des effets spéciaux ////////////
+#define SIREN_STROBO_DURATION 80  // 80 ms
+#define GYRO_FADE_TIME        1   // 1 ms
+#define GYRO_MAX_LEVEL        255 
+unsigned long lastEffectUpdateTime = 0;
+byte gyro1FadeLevel = 0;
+byte gyro2FadeLevel = GYRO_MAX_LEVEL/3;
+byte gyro3FadeLevel = 2*GYRO_MAX_LEVEL/3;
+#define SIREN_SEQUENCE_SIZE 25
+byte sirenSequenceIndex = 0;
+byte sirenSequence[SIREN_SEQUENCE_SIZE] = {0,1,2,0,1,2,0,1,2,3,8,3,8,4,8,4,8,5,8,5,8,6,7,6,7};
+
+byte updateGyroFadeLeve(byte gyroFadeLevel)
+{
+  gyroFadeLevel++;
+  if(gyroFadeLevel > GYRO_MAX_LEVEL)
+  {
+    gyroFadeLevel = 0;
+  }
+  return gyroFadeLevel;
+}
+
+void updateSpecialEffects()
+{
+  unsigned long now = millis();
+  if(curSpecialEffect == SIREN)
+  {
+    if(now - lastEffectUpdateTime >= SIREN_STROBO_DURATION)
+    {
+      lastEffectUpdateTime = now;
+      switch(sirenSequence[sirenSequenceIndex])
+      {
+        case 0:
+          setLedColor(GYROPHARE_1,RED);
+          setLedColor(GYROPHARE_2,BLACK);
+          setLedColor(GYROPHARE_3,BLACK);
+          break;
+        case 1:
+          setLedColor(GYROPHARE_1,BLACK);
+          setLedColor(GYROPHARE_2,WHITE);
+          setLedColor(GYROPHARE_3,BLACK);
+          break;
+        case 2:
+          setLedColor(GYROPHARE_1,BLACK);
+          setLedColor(GYROPHARE_2,BLACK);
+          setLedColor(GYROPHARE_3,BLUE);
+          break;
+        case 3:
+          setLedColor(GYROPHARE_1,RED);
+          setLedColor(GYROPHARE_2,RED);
+          setLedColor(GYROPHARE_3,RED);
+          break;
+        case 4:
+          setLedColor(GYROPHARE_1,WHITE);
+          setLedColor(GYROPHARE_2,WHITE);
+          setLedColor(GYROPHARE_3,WHITE);
+          break;
+        case 5:
+          setLedColor(GYROPHARE_1,BLUE);
+          setLedColor(GYROPHARE_2,BLUE);
+          setLedColor(GYROPHARE_3,BLUE);
+          break;
+        case 6:
+          setLedColor(GYROPHARE_1,RED);
+          setLedColor(GYROPHARE_2,RED);
+          setLedColor(GYROPHARE_3,BLACK);
+          break;
+        case 7:
+          setLedColor(GYROPHARE_1,BLACK);
+          setLedColor(GYROPHARE_2,BLUE);
+          setLedColor(GYROPHARE_3,BLUE);
+          break;
+        case 8:
+        default:
+          setLedColor(GYROPHARE_1,BLACK);
+          setLedColor(GYROPHARE_2,BLACK);
+          setLedColor(GYROPHARE_3,BLACK);
+          break;
+      }
+      sirenSequenceIndex++;
+      if(sirenSequenceIndex >= SIREN_SEQUENCE_SIZE)
+      {
+        sirenSequenceIndex = 0;
+      }
+    }
+  }
+  else
+  {
+    if(now - lastEffectUpdateTime >= GYRO_FADE_TIME)
+    {
+      gyro1FadeLevel = updateGyroFadeLeve(gyro1FadeLevel);
+      gyro2FadeLevel = updateGyroFadeLeve(gyro2FadeLevel);
+      gyro3FadeLevel = updateGyroFadeLeve(gyro3FadeLevel);
+      uint32_t color1 = strip1.gamma32(strip1.ColorHSV(7140,0xFF,gyro1FadeLevel));
+      uint32_t color2 = strip1.gamma32(strip1.ColorHSV(7140,0xFF,gyro2FadeLevel));
+      uint32_t color3 = strip1.gamma32(strip1.ColorHSV(7140,0xFF,gyro3FadeLevel));
+      setLedColor(GYROPHARE_1,color1);
+      setLedColor(GYROPHARE_2,color2);
+      setLedColor(GYROPHARE_3,color3);
+      lastEffectUpdateTime = now;
+    }
   }
 }
 
@@ -498,6 +611,9 @@ void loop() {
 
   // Animation des yeux
   updateEyes();
+
+  // Animation effets speciaux
+  updateSpecialEffects();
 
   // Lecture cannaux radio (basée sur une interruption)
   int newCh1 = ch1PulseWidth;
