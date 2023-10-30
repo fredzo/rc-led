@@ -35,7 +35,7 @@
 #define CLIGNOTANT_AR_GAUCHE2 0x14
 #define CLIGNOTANT_AR_GAUCHE1 0x15
 
-//#define SERIAL_OUT
+// #define SERIAL_OUT
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip1(PIXEL_COUNT_1, PIXEL_PIN_1, NEO_GRB + NEO_KHZ800);
@@ -203,7 +203,7 @@ void blinkLeft(bool on)
       lastBlinkTime = now;
       lastBlinkState = !lastBlinkState;
       setLeftLedsState(lastBlinkState);
-      if(!backwardNotif) lastBlinkState ? EasyBuzzer.singleBeep(880,5) : EasyBuzzer.singleBeep(440,5);
+      if(!backwardNotif) lastBlinkState ? EasyBuzzer.singleBeep(880,50) : EasyBuzzer.singleBeep(440,50);
     }
   }
   else if(blinkingLeft)
@@ -348,9 +348,18 @@ void changeSpecialEffect(bool up)
 // Détection du Konami code
 void detectKonamiCode()
 {
-  for(int i = 0 ; i < KONAMI_CODE_SIZE ; i++)
+#ifdef SERIAL_OUT
+  Serial.print("Current code :");
+  for(int i = KONAMI_CODE_SIZE-1 ; i >= 0 ; i--)
   {
-    if(chStates[i] != konamiCode[i]) return;
+    Serial.print(" ");
+    Serial.print((int)chStates[i]);
+  }
+  Serial.println();
+#endif
+  for(int i = 0 ; i < KONAMI_CODE_SIZE ; i++)
+  { // Check command stack in reverse order since it is a FIFO
+    if(chStates[KONAMI_CODE_SIZE-1-i] != konamiCode[i]) return;
   }
   // Konami code found
   changeSpecialEffect(true);
@@ -502,8 +511,8 @@ void loop() {
   {
     ch1 = newCh1;
 #ifdef SERIAL_OUT
-    Serial.print("Channel 1:"); // Print the value of 
-    Serial.println(ch1);        // each channel
+    //Serial.print("Channel 1:"); // Print the value of 
+    //Serial.println(ch1);        // each channel
 #endif
     if(ch1 < CHANNEL_CENTER_VALUE - CHANNEL_THRESHOLD)
     {
@@ -524,8 +533,8 @@ void loop() {
   {
     ch2 = newCh2;
 #ifdef SERIAL_OUT
-    Serial.print("Channel 2:"); // Print the value of 
-    Serial.println(ch2);        // each channel
+    //Serial.print("Channel 2:"); // Print the value of 
+    //Serial.println(ch2);        // each channel
 #endif
     if(ch2 < CHANNEL_CENTER_VALUE - CHANNEL_THRESHOLD)
     {
@@ -558,8 +567,8 @@ void loop() {
           break;
         case STOP :
         default :
-          if(curMotionState != BRAKE)
-          { // Keep braking state when trigger is released
+          if(curMotionState != BRAKE && curMotionState != BACK)
+          { // Keep braking and back state when trigger is released
             curMotionState = NONE;
           }
           break;
@@ -584,15 +593,6 @@ void loop() {
       break;
   }
 
-  if(curMotionState == BACK)
-  {
-    backward();
-  }
-  else
-  {
-    stopBackward();
-  }
-
   if(curMotionState == BRAKE)
   {
     braking();
@@ -602,6 +602,15 @@ void loop() {
     stopBraking();
   }
 
+
+  if(curMotionState == BACK)
+  {
+    backward();
+  }
+  else
+  {
+    stopBackward();
+  }
 
   // Get current button state.
   boolean newButtonState = digitalRead(BUTTON_PIN);
