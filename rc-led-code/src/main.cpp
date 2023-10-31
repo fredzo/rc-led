@@ -1,132 +1,22 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
+#include <RcLedConf.h>
 #include <EasyBuzzer.h>
+#include <LedManager.h>
 
-// Digital IO pin connected to the button. This will be driven with a
-// pull-up resistor so the switch pulls the pin to ground momentarily.
-// On a high -> low transition the button press logic will execute.
-#define BUTTON_PIN        0
-#define BUZZER_PIN        25
-
-#define PIXEL_PIN_1       33  // Digital IO pin connected to the NeoPixels.
-#define PIXEL_PIN_2       32  // Digital IO pin connected to the NeoPixels.
-
-#define CHANEL_1_PIN      27
-#define CHANEL_2_PIN      26
-
-#define PIXEL_COUNT_1     9 // Number of NeoPixels
-#define PIXEL_COUNT_2     6 // Number of NeoPixels
-
-// Bandeau 1
-#define CLIGNOTANT_DROIT      0x00
-#define PHARE_DROIT           0x01
-#define PHARE_GAUCHE          0x02
-#define CLIGNOTANT_GAUCHE     0x03
-#define OEIL_GAUCHE           0x04
-#define OEIL_DROIT            0x05
-#define GYROPHARE_1           0x06
-#define GYROPHARE_2           0x07
-#define GYROPHARE_3           0x08
-// Bandeau 2
-#define CLIGNOTANT_AR_DROIT1  0x10
-#define CLIGNOTANT_AR_DROIT2  0x11
-#define STOP_DROIT            0x12
-#define STOP_GAUCHE           0x13
-#define CLIGNOTANT_AR_GAUCHE2 0x14
-#define CLIGNOTANT_AR_GAUCHE1 0x15
-
-// #define SERIAL_OUT
+LedManager* ledManager = nullptr;
 
 // Fonction déclarée plus loin pour déterminer si l'effet en cours utilise le buzzer
 bool specialEffectHasSound();
 
-// Declare our NeoPixel strip object:
-Adafruit_NeoPixel strip1(PIXEL_COUNT_1, PIXEL_PIN_1, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel strip2(PIXEL_COUNT_2, PIXEL_PIN_2, NEO_GRB + NEO_KHZ800);
-
-void colorWipe(uint32_t color, int wait) {
-  for(int i=0; i<strip1.numPixels(); i++) { // For each pixel in strip...
-    strip1.setPixelColor(i, color);         //  Set pixel's color (in RAM)
-    strip1.show();                          //  Update strip to match
-    delay(wait);                           //  Pause for a moment
-  }
-}
-
-void colorWipe2(uint32_t color, int wait) {
-  for(int i=0; i<strip2.numPixels(); i++) { // For each pixel in strip...
-    strip2.setPixelColor(i, color);         //  Set pixel's color (in RAM)
-    strip2.show();                          //  Update strip to match
-    delay(wait);                           //  Pause for a moment
-  }
-}
-
-
-// Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
-void rainbow(int wait) {
-  // Hue of first pixel runs 3 complete loops through the color wheel.
-  // Color wheel has a range of 65536 but it's OK if we roll over, so
-  // just count from 0 to 3*65536. Adding 256 to firstPixelHue each time
-  // means we'll make 3*65536/256 = 768 passes through this outer loop:
-  for(long firstPixelHue = 0; firstPixelHue < 3*65536; firstPixelHue += 256) {
-    for(int i=0; i<strip1.numPixels(); i++) { // For each pixel in strip...
-      // Offset pixel hue by an amount to make one full revolution of the
-      // color wheel (range of 65536) along the length of the strip
-      // (strip.numPixels() steps):
-      int pixelHue = firstPixelHue + (i * 65536L / strip1.numPixels());
-      // strip.ColorHSV() can take 1 or 3 arguments: a hue (0 to 65535) or
-      // optionally add saturation and value (brightness) (each 0 to 255).
-      // Here we're using just the single-argument hue variant. The result
-      // is passed through strip.gamma32() to provide 'truer' colors
-      // before assigning to each pixel:
-      strip1.setPixelColor(i, strip1.gamma32(strip1.ColorHSV(pixelHue)));
-    }
-    strip1.show(); // Update strip with new contents
-    delay(wait);  // Pause for a moment
-  }
-}
-
-// Couleurs de base
-uint32_t ORANGE = Adafruit_NeoPixel::Color(255,70,0);
-uint32_t BLACK = Adafruit_NeoPixel::Color(0,0,0);
-uint32_t WHITE = Adafruit_NeoPixel::Color(255,255,255);
-uint32_t RED = Adafruit_NeoPixel::Color(255,0,0);
-uint32_t BLUE = Adafruit_NeoPixel::Color(0,0,255);
-
-// Fonction générique pour positionner la couleur d'une LED
-void setLedColor(byte led, uint32_t color) {
-  if(led < 0x10)
-  { // Badeau 1
-    strip1.setPixelColor(led, color);       //  Set pixel's color (in RAM)
-    strip1.show();                          //  Update strip to match
-  }
-  else
-  { // Bandeau 2
-    led = led & 0x0F;
-    strip2.setPixelColor(led, color);       //  Set pixel's color (in RAM)
-    strip2.show();                          //  Update strip to match
-  }
-}
-
-// Fonction générique pour éteindre une LED
-void setLedOff(byte led) {
-  setLedColor(led,BLACK);
-}
 
 //////////// Gestion du recul //////////////
 bool backwardNotif = false;
-
-void setBackwardLedsState(bool on)
-{
-  uint32_t color = on ? WHITE : BLACK;
-  setLedColor(STOP_DROIT,color);
-  setLedColor(STOP_GAUCHE,color);
-}
 
 void backward()
 {
   if(!backwardNotif)
   {
-    setBackwardLedsState(true);
+    ledManager->setBackwardLedsState(true);
     if(!specialEffectHasSound())
     { // Use squence number = 0 for infinite sequence
       // Pause duration must not be 0 (infinite beep) so we set off duration at 0 and pause duration at 500 ms 
@@ -140,7 +30,7 @@ void stopBackward()
 {
   if(backwardNotif)
   {
-    setBackwardLedsState(false);
+    ledManager->setBackwardLedsState(false);
     if(!specialEffectHasSound()) EasyBuzzer.stop();
     backwardNotif = false;
   }
@@ -149,18 +39,11 @@ void stopBackward()
 //////////// Gestion du Stop //////////////
 bool stopNotif = false;
 
-void setStopLedsState(bool on)
-{
-  uint32_t color = on ? RED : BLACK;
-  setLedColor(STOP_DROIT,color);
-  setLedColor(STOP_GAUCHE,color);
-}
-
 void braking()
 {
   if(!stopNotif)
   {
-    setStopLedsState(true);
+    ledManager->setStopLedsState(true);
     stopNotif = true;
   }
 }
@@ -169,7 +52,7 @@ void stopBraking()
 {
   if(stopNotif)
   {
-    setStopLedsState(false);
+    ledManager->setStopLedsState(false);
     stopNotif = false;
   }
 }
@@ -182,22 +65,6 @@ bool lastBlinkState = false;
 bool blinkingLeft = false;
 bool blinkingRight = false;
 
-void setLeftLedsState(bool on)
-{
-  uint32_t color = on ? ORANGE : BLACK;
-  setLedColor(CLIGNOTANT_GAUCHE,color);
-  setLedColor(CLIGNOTANT_AR_GAUCHE1,color);
-  setLedColor(CLIGNOTANT_AR_GAUCHE2,color);
-}
-
-void setRightLedsState(bool on)
-{
-  uint32_t color = on ? ORANGE : BLACK;
-  setLedColor(CLIGNOTANT_DROIT,color);
-  setLedColor(CLIGNOTANT_AR_DROIT1,color);
-  setLedColor(CLIGNOTANT_AR_DROIT2,color);
-}
-
 void blinkLeft(bool on)
 {
   if(on)
@@ -208,13 +75,13 @@ void blinkLeft(bool on)
     {
       lastBlinkTime = now;
       lastBlinkState = !lastBlinkState;
-      setLeftLedsState(lastBlinkState);
+      ledManager->setLeftLedsState(lastBlinkState);
       if(!backwardNotif && !specialEffectHasSound()) lastBlinkState ? EasyBuzzer.singleBeep(880,50) : EasyBuzzer.singleBeep(440,50);
     }
   }
   else if(blinkingLeft)
   {
-      setLeftLedsState(false);
+      ledManager->setLeftLedsState(false);
       blinkingLeft = false;
       lastBlinkState = false;
       lastBlinkTime = 0;
@@ -231,13 +98,13 @@ void blinkRight(bool on)
     {
       lastBlinkTime = now;
       lastBlinkState = !lastBlinkState;
-      setRightLedsState(lastBlinkState);
+      ledManager->setRightLedsState(lastBlinkState);
       if(!backwardNotif && !specialEffectHasSound()) lastBlinkState ? EasyBuzzer.singleBeep(880,50) : EasyBuzzer.singleBeep(440,50);
     }
   }
   else if(blinkingRight)
   {
-      setRightLedsState(false);
+      ledManager->setRightLedsState(false);
       blinkingRight = false;
       lastBlinkState = false;
       lastBlinkTime = 0;
@@ -252,13 +119,6 @@ unsigned long lastEyesFadeTime = 0;
 byte eyesFadeLevel = 0;
 bool eyesPaused = false;
 bool eyesRising = true;
-
-void setEyesLevel(byte level)
-{
-  uint32_t color = strip1.gamma32(strip1.ColorHSV(0,0xFF,level));
-  setLedColor(OEIL_GAUCHE,color);
-  setLedColor(OEIL_DROIT,color);
-}
 
 void updateEyes()
 {
@@ -292,7 +152,7 @@ void updateEyes()
           eyesPaused = true;
         }
       }
-      setEyesLevel(eyesFadeLevel);
+      ledManager->setEyesLevel(eyesFadeLevel);
       lastEyesFadeTime = now;
     }
   }
@@ -459,50 +319,50 @@ void updateSpecialEffects()
       switch(sirenSequence[sirenSequenceIndex])
       {
         case 0:
-          setLedColor(GYROPHARE_1,RED);
-          setLedColor(GYROPHARE_2,BLACK);
-          setLedColor(GYROPHARE_3,BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::RED);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::BLACK);
           break;
         case 1:
-          setLedColor(GYROPHARE_1,BLACK);
-          setLedColor(GYROPHARE_2,WHITE);
-          setLedColor(GYROPHARE_3,BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::WHITE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::BLACK);
           break;
         case 2:
-          setLedColor(GYROPHARE_1,BLACK);
-          setLedColor(GYROPHARE_2,BLACK);
-          setLedColor(GYROPHARE_3,BLUE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::BLUE);
           break;
         case 3:
-          setLedColor(GYROPHARE_1,RED);
-          setLedColor(GYROPHARE_2,RED);
-          setLedColor(GYROPHARE_3,RED);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::RED);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::RED);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::RED);
           break;
         case 4:
-          setLedColor(GYROPHARE_1,WHITE);
-          setLedColor(GYROPHARE_2,WHITE);
-          setLedColor(GYROPHARE_3,WHITE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::WHITE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::WHITE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::WHITE);
           break;
         case 5:
-          setLedColor(GYROPHARE_1,BLUE);
-          setLedColor(GYROPHARE_2,BLUE);
-          setLedColor(GYROPHARE_3,BLUE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::BLUE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::BLUE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::BLUE);
           break;
         case 6:
-          setLedColor(GYROPHARE_1,RED);
-          setLedColor(GYROPHARE_2,RED);
-          setLedColor(GYROPHARE_3,BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::RED);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::RED);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::BLACK);
           break;
         case 7:
-          setLedColor(GYROPHARE_1,BLACK);
-          setLedColor(GYROPHARE_2,BLUE);
-          setLedColor(GYROPHARE_3,BLUE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::BLUE);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::BLUE);
           break;
         case 8:
         default:
-          setLedColor(GYROPHARE_1,BLACK);
-          setLedColor(GYROPHARE_2,BLACK);
-          setLedColor(GYROPHARE_3,BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_1,LedManager::BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_2,LedManager::BLACK);
+          ledManager->setLedColor(LedManager::Led::GYROPHARE_3,LedManager::BLACK);
           break;
       }
       sirenSequenceIndex++;
@@ -519,12 +379,12 @@ void updateSpecialEffects()
       gyro1FadeLevel = updateGyroFadeLeve(gyro1FadeLevel);
       gyro2FadeLevel = updateGyroFadeLeve(gyro2FadeLevel);
       gyro3FadeLevel = updateGyroFadeLeve(gyro3FadeLevel);
-      uint32_t color1 = strip1.gamma32(strip1.ColorHSV(7140,0xFF,gyro1FadeLevel));
-      uint32_t color2 = strip1.gamma32(strip1.ColorHSV(7140,0xFF,gyro2FadeLevel));
-      uint32_t color3 = strip1.gamma32(strip1.ColorHSV(7140,0xFF,gyro3FadeLevel));
-      setLedColor(GYROPHARE_1,color1);
-      setLedColor(GYROPHARE_2,color2);
-      setLedColor(GYROPHARE_3,color3);
+      uint32_t color1 = ledManager->colorHSV(7140,0xFF,gyro1FadeLevel);
+      uint32_t color2 = ledManager->colorHSV(7140,0xFF,gyro2FadeLevel);
+      uint32_t color3 = ledManager->colorHSV(7140,0xFF,gyro3FadeLevel);
+      ledManager->setLedColor(LedManager::Led::GYROPHARE_1,color1);
+      ledManager->setLedColor(LedManager::Led::GYROPHARE_2,color2);
+      ledManager->setLedColor(LedManager::Led::GYROPHARE_3,color3);
       lastEffectUpdateTime = now;
     }
   }
@@ -577,20 +437,17 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(CHANEL_2_PIN), pwmCh2, CHANGE);  // interruption sur Rise et Fall
   EasyBuzzer.setPin(BUZZER_PIN);
 
+  ledManager = LedManager::getLedManager();
+  ledManager->init();
+
 #ifdef SERIAL_OUT
   Serial.begin(115200);
   Serial.println("Démarrage RC LED !");
 #endif
-  strip1.begin(); // Initialize NeoPixel strip object (REQUIRED)
-  strip1.show();  // Initialize all pixels to 'off'
-  colorWipe(strip1.Color(255,   255,   255), 200);    // White
-  strip2.begin(); // Initialize NeoPixel strip object (REQUIRED)
-  strip2.show();  // Initialize all pixels to 'off'
-  colorWipe2(strip2.Color(255,   0,   0), 200);    // White
 
   EasyBuzzer.singleBeep(440,500);
   
-  colorWipe2(strip2.Color(0,   0,   0), 0);    // Turn off back leds
+  ledManager->colorWipe(LedManager::Strip::STRIP_1,LedManager::BLACK,0);    // Turn off back leds
 }
 
 int ch1=-1; // Here's where we'll keep our channel values
