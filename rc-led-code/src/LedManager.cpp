@@ -50,38 +50,38 @@ void LedManager::setLedOff(Led led) {
 void LedManager::setBackwardLedsState(bool on)
 {
   uint32_t color = on ? WHITE : BLACK;
-  setLedColor(STOP_DROIT,color);
-  setLedColor(STOP_GAUCHE,color);
+  setLedColor(RIGHT_STOP,color);
+  setLedColor(LEFT_STOP,color);
 }
 
 void LedManager::setStopLedsState(bool on)
 {
   uint32_t color = on ? RED : BLACK;
-  setLedColor(STOP_DROIT,color);
-  setLedColor(STOP_GAUCHE,color);
+  setLedColor(RIGHT_STOP,color);
+  setLedColor(LEFT_STOP,color);
 }
 
 void LedManager::setLeftLedsState(bool on)
 {
   uint32_t color = on ? ORANGE : BLACK;
-  setLedColor(CLIGNOTANT_GAUCHE,color);
-  setLedColor(CLIGNOTANT_AR_GAUCHE1,color);
-  setLedColor(CLIGNOTANT_AR_GAUCHE2,color);
+  setLedColor(LEFT_TURN_SIGNAL,color);
+  setLedColor(BACK_LEFT_TURN_SIGNAL1,color);
+  setLedColor(BACK_LEFT_TURN_SIGNAL2,color);
 }
 
 void LedManager::setRightLedsState(bool on)
 {
   uint32_t color = on ? ORANGE : BLACK;
-  setLedColor(CLIGNOTANT_DROIT,color);
-  setLedColor(CLIGNOTANT_AR_DROIT1,color);
-  setLedColor(CLIGNOTANT_AR_DROIT2,color);
+  setLedColor(RIGHT_TURN_SIGNAL,color);
+  setLedColor(BACK_RIGHT_TURN_SIGNAL1,color);
+  setLedColor(BACK_RIGHT_TURN_SIGNAL2,color);
 }
 
 void LedManager::setEyesLevel(byte level)
 {
   uint32_t color = strip1->gamma32(strip1->ColorHSV(0,0xFF,level));
-  setLedColor(OEIL_GAUCHE,color);
-  setLedColor(OEIL_DROIT,color);
+  setLedColor(LEFT_EYE,color);
+  setLedColor(RIGHT_EYE,color);
 }
 
 
