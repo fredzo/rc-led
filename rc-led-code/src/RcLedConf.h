@@ -20,6 +20,6 @@
 #define CHANEL_2_PIN      26
 
 // Uncomment to enable logs on serial out
-// #define SERIAL_OUT
+//#define SERIAL_OUT
 
 #endif
